@@ -15,12 +15,18 @@ namespace Product.Domain.Model
             if (!int.TryParse(din, out _))
                 throw new ValidationException($"The '{nameof(din).ToUpper()}' must be a number.");
 
-            if (string.IsNullOrEmpty(name))
+            if (string.IsNullOrWhiteSpace(name))
                 throw new ValidationException($"The '{nameof(name).ToUpper()}' is required.");
-            if (string.IsNullOrEmpty(shape))
+            if (name.Length > 30)
+                throw new ValidationException($"The max length for the '{nameof(name).ToUpper()}' is 30 characters.");
+            if (string.IsNullOrWhiteSpace(shape))
                 throw new ValidationException($"The '{nameof(shape).ToUpper()}' is required.");
-            if (string.IsNullOrEmpty(strength))
+            if (shape.Length > 100)
+                throw new ValidationException($"The max length for the '{nameof(shape).ToUpper()}' is 100 characters.");
+            if (string.IsNullOrWhiteSpace(strength))
                 throw new ValidationException($"The '{nameof(strength).ToUpper()}' is required.");
+            if (strength.Length > 100)
+                throw new ValidationException($"The max length for the '{nameof(strength).ToUpper()}' is 100 characters.");
             
             DIN = din ?? string.Empty;
             Name = name ?? string.Empty;
