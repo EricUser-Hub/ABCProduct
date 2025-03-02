@@ -1,6 +1,9 @@
+using System.Text.Json.Serialization;
+using Microsoft.OpenApi.Models;
 using Product.API.ExceptionHandler;
 using Product.API.Extensions;
 using Product.Application.Queries;
+using Product.Infrastructure.MessageQueues;
 
 namespace Product.API 
 {
@@ -11,11 +14,23 @@ namespace Product.API
             var builder = WebApplication.CreateBuilder(args);
 
             builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddSwaggerGen();
+            builder.Services.AddSwaggerGen(
+                c => { 
+                    c.SwaggerDoc("v1", new OpenApiInfo { Title = "ABCProduct API", Version = "v1" });
+                });
             builder.Services.AddDatabaseServices();
             builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(ProductGetAllQuery).Assembly));
             builder.Services.AddMvc();
-
+            builder.Services.AddControllers()
+                .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+                
+/*
+            builder.Services.Configure<RabbitMqConfiguration>(builder.Configuration.GetSection("RabbitMqConfiguration"));
+            builder.Services.AddSingleton<IRabbitMqService, RabbitMqService>();
+            builder.Services.AddSingleton<IConsumerService, ConsumerService>();
+            builder.Services.AddHostedService<ConsumerHostedService>();
+*/
+            
             builder.Logging.AddConsole();
 
             var app = builder.Build();
@@ -25,42 +40,21 @@ namespace Product.API
                 app.UseSwagger();
                 app.UseSwaggerUI();
             } 
-            else
-            {
-                app.UseExceptionHandler("/Error");
-                app.UseHsts();
-            }        
-
-            app.UseHttpsRedirection();
             
+            app.UseHttpsRedirection();
             app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
             app.MapControllers();
 
             // TODO Eric : 
-            // Afficher dans une console les évènements consommés
-            // Solution à déposer sur GitLab ou Github selon votre choix
+            // - Securite Jwt Token
+            // - RabbitMQ
+            //    - Afficher dans une console les évènements consommés
 
 
             //app.UseAuthorization();
 
             //app.MapGet("/product/{productId}", (int productId) => new ProductModel(productId));
 
-/*
-            app.MapGet("/weatherforecast", () =>
-            {
-                var forecast =  Enumerable.Range(1, 5).Select(index =>
-                    new WeatherForecast
-                    (
-                        DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-                        Random.Shared.Next(-20, 55),
-                        summaries[Random.Shared.Next(summaries.Length)]
-                    ))
-                    .ToArray();
-                return forecast;
-            })
-            .WithName("GetWeatherForecast")
-            .WithOpenApi();
-*/
             app.Run();
         }
     }

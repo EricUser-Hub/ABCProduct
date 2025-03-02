@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
 using Product.Domain.Enums;
 using Product.Domain.Model;
@@ -17,31 +18,6 @@ namespace Product.Infrastructure.Repositories
             dbSet = context.Set<ProductEntity>();
         }
 
-/*
-        public virtual IEnumerable<TModel> Get(
-            Expression<Func<TEntity, bool>>? filter = null,
-            Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>>? orderBy = null,
-            string includeProperties = "")
-        {
-            IQueryable<TEntity> query = dbSet;
-
-            if (filter != null)
-                query = query.Where(filter);
-            
-            foreach (var includeProperty in includeProperties.Split
-                ([','], StringSplitOptions.RemoveEmptyEntries))
-            {
-                query = query.Include(includeProperty);
-            }
-
-            //if (orderBy != null)
-            //    return [.. orderBy(query)];
-            var products = query.ToList();
-                
-            return products.ForEach(p => new ProductModel(p.));
-        }
-        */
-
         public virtual async Task<ProductModel?> GetByDINAsync(object din)
         {
             ProductModel? returnValue = null;
@@ -51,6 +27,21 @@ namespace Product.Infrastructure.Repositories
                 returnValue = new ProductModel(product.DIN, product.Name, product.Shape, product.Strength, (LegalStatus)product.LegalStatus);
             
             return returnValue;
+        }
+
+        public virtual async Task<ICollection<ProductModel>> GetAllFiltered(string? shapeFilter, LegalStatus? legalStatusFilter)
+        {
+            var result = dbSet.AsNoTracking();
+
+            if (!string.IsNullOrEmpty(shapeFilter))
+                result = result.Where(p => p.Shape == shapeFilter);
+            if (legalStatusFilter.HasValue)
+                result = result.Where(p => p.LegalStatus == (int)legalStatusFilter);
+            
+            var bag = new ConcurrentBag<ProductModel>();
+            await result.ForEachAsync(product => bag.Add(new ProductModel(product.DIN, product.Name, product.Shape, product.Strength, (LegalStatus)product.LegalStatus)));
+            
+            return [.. bag];
         }
 
         public void InsertOrUpdate(ProductModel model)
@@ -76,13 +67,5 @@ namespace Product.Infrastructure.Repositories
                 dbSet.Attach(entityToDelete);
             dbSet.Remove(entityToDelete);
         }
-
-/*
-        public virtual void Update(ProductEntity entityToUpdate)
-        {
-            dbSet.Attach(entityToUpdate);
-            context.Entry(entityToUpdate).State = EntityState.Modified;
-        }
-        */
     }
 }

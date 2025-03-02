@@ -33,7 +33,6 @@ namespace Product.Infrastructure.Context
                             var anyProductExist = context.Set<ProductEntity>().Any();
                             if (!anyProductExist)
                             {                                
-                                
                                 var sourceProducts = JsonSerializer.Deserialize<IEnumerable<ProductModel>>(Seed.ProductsJson);
 
                                 if (sourceProducts != null)
